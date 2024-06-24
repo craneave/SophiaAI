@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Gradle files
+android/.gradle/
+android/app/build/
+
+# iOS build files
+ios/Pods/
+ios/build/
+ios/Podfile.lock
+ios/*.xcworkspace/
+ios/*.pbxproj
+ios/*.mode1v3
+ios/*.mode2v3
+ios/*.perspectivev3
+
+# Android build files
+android/app/build/
+android/build/
+android/local.properties
+android/.idea
+
+# macOS specific files
+.DS_Store
