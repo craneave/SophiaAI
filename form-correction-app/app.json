@@ -1,5 +1,6 @@
 {
   "expo": {
+    "entryPoint" : "./App.tsx",
     "name": "form-correction-app",
     "slug": "form-correction-app",
     "version": "1.0.0",
