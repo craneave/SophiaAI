@@ -1,66 +1,69 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { CameraType } from 'expo-camera/build/legacy/Camera.types';
+import * as React from "react";
+import { SafeAreaView, StyleSheet, View } from "react-native";
+import { CameraMode, CameraView, FlashMode } from "expo-camera";
+import BottomRowTools from "../components/BottomRowTools";
+import MainRowActions from "../components/MainRowActions";
+import CameraTools from "../components/CameraTools";
+import VideoViewComponent from "../components/VideoView";
 
-export default function App() {
-  const [facing, setFacing] = useState(CameraType.back);
-  const [permission, requestPermission] = useCameraPermissions();
+export default function HomeScreen() {
+  const cameraRef = React.useRef<CameraView>(null);
+  const [cameraMode, setCameraMode] = React.useState<CameraMode>("video");
+  const [cameraTorch, setCameraTorch] = React.useState<boolean>(false);
+  const [cameraFacing, setCameraFacing] = React.useState<"front" | "back">(
+    "back"
+  );
+  const [video, setVideo] = React.useState<string>("");
+  const [isRecording, setIsRecording] = React.useState<boolean>(false);
 
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
+  async function toggleRecord() {
+    if (isRecording) {
+      cameraRef.current?.stopRecording();
+      setIsRecording(false);
+    } else {
+      setIsRecording(true);
+      const response = await cameraRef.current?.recordAsync();
+      setVideo(response!.uri);
+    }
   }
 
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
-
-  function toggleCameraFacing() {
-    setFacing(current => (current === CameraType.back ? CameraType.front : CameraType.back));
-  }
+  if (video) return <VideoViewComponent video={video} setVideo={setVideo} />;
 
   return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
+    <CameraView
+      ref={cameraRef}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      facing={cameraFacing}
+      mode={cameraMode}
+      enableTorch={cameraTorch}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+      <View style={styles.fullScreen}>
+          <CameraTools
+            cameraTorch={cameraTorch}
+            setCameraFacing={setCameraFacing}
+            setCameraTorch={setCameraTorch} 
+            />
+          <MainRowActions
+            isRecording={isRecording}
+            handleRecord={toggleRecord}
+            cameraMode={cameraMode}
+          />
+          <BottomRowTools
+            cameraMode={cameraMode}
+            setCameraMode={setCameraMode}
+          />
         </View>
-      </CameraView>
-    </View>
+      </SafeAreaView>
+    </CameraView>
+    
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fullScreen: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    width: '100%',
+    height: '100%',
   },
 });

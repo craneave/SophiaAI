@@ -1,0 +1,5 @@
+Django==4.2.7
+djangorestframework==3.14.0
+mediapipe==0.10.14
+opencv-python-headless==4.8.1.78
+gunicorn==21.2.0

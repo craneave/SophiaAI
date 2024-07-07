@@ -27,8 +27,16 @@ const AppNavigator = () => {
           },
         })}
       >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Record" component={RecordScreen} />
+        <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ headerShown: false }} 
+        />
+        <Tab.Screen 
+        name="Record" 
+        component={RecordScreen} 
+        options={{ headerShown: false }} 
+/>
       </Tab.Navigator>
     </NavigationContainer>
   );
