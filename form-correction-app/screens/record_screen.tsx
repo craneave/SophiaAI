@@ -4,7 +4,7 @@ import { CameraMode, CameraView, FlashMode } from "expo-camera";
 import BottomRowTools from "../components/BottomRowTools";
 import MainRowActions from "../components/MainRowActions";
 import CameraTools from "../components/CameraTools";
-import VideoViewComponent from "../components/VideoView";
+import VideoViewComponent from "../components/VideoUploadView";
 
 export default function HomeScreen() {
   const cameraRef = React.useRef<CameraView>(null);
