@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import IconButton from "./IconButton";
+import IconButton from "../IconButton";
 import { FlashMode } from "expo-camera";
 
 interface CameraToolsProps {

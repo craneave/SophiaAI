@@ -1,6 +1,6 @@
 {
   "expo": {
-    "entryPoint" : "./App.tsx",
+    "entryPoint": "./App.tsx",
     "name": "form-correction-app",
     "slug": "form-correction-app",
     "version": "1.0.0",
@@ -46,7 +46,8 @@
           "recordAudioAndroid": true
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

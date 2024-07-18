@@ -16,8 +16,8 @@ app.use(cors({
   }));
 
 app.use(express.json());
+app.use('/processed-videos', express.static('results'));
 
-// Logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
@@ -52,14 +52,14 @@ app.get('/test', (req, res) => {
 });
 
 app.post('/process-video', upload.single('video'), (req, res) => {
-  if (!req.file) {
+	if (!req.file) {
     console.log('No file uploaded');
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
   console.log(`File received: ${req.file.originalname}`);
 
-  const pythonProcess = spawn('python', ['process_video.py', req.file.path]);
+  const pythonProcess = spawn('python', ['src/process_video.py', req.file.path]);
 
   let pythonOutput = '';
   let pythonError = '';
@@ -92,36 +92,35 @@ app.post('/process-video', upload.single('video'), (req, res) => {
 	}
   
 	fs.readFile('results.json', 'utf8', (err, data) => {
-	  if (err) {
-		console.error('Error reading results:', err);
-		return res.status(500).json({ error: 'Error reading processing results' });
-	  }
-  
-	  try {
-		const result = JSON.parse(data);
-		res.json({
-		  message: 'Video processed successfully',
-		  result: result,
-		  pythonOutput: pythonOutput
-		});
-	  } catch (parseError) {
-		console.error('Error parsing results:', parseError);
-		res.status(500).json({
-		  error: 'Error parsing processing results',
-		  details: parseError.toString()
-		});
-	  }
-	});
+		if (err) {
+		  console.error('Error reading results:', err);
+		  return res.status(500).json({ error: 'Error reading processing results' });
+		}
+		try {
+		  const result = JSON.parse(data);
+		  console.log("RESULTS", result)
+		  const processedVideoFilename = path.basename(result.processedVideoPath);
+		  const processedVideoUrl = `${req.protocol}://${req.get('host')}/processed-videos/${processedVideoFilename}`;
+		  res.json({
+			message: 'Video processed successfully',
+			result: {
+			  ...result,
+			  processedVideoUrl: processedVideoUrl
+			},
+			pythonOutput: pythonOutput
+		  });
+		} catch (parseError) {
+			console.error('Error parsing:', parseError);
+		}
+	  });  
   });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

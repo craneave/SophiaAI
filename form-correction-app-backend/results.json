@@ -1,1 +1,5 @@
-{"framesProcessed": 0, "averageConfidence": 0, "outputVideoPath": "results\\Processed-1721159147712-video.mp4"}
+{
+  "framesProcessed": 362,
+  "averageConfidence": 0.7486070140792954,
+  "processedVideoPath": "results\\Processed-1721337778966-video.avi"
+}
