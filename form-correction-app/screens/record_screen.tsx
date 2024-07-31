@@ -1,3 +1,15 @@
+/**
+ * @file record_screen.tsx
+ * 
+ * @description This is the record screen page that will be shown when the user goes to record a video to upload
+ *              This script will handle the camera and will use other scripts for tools and toolbars
+ * 
+ * @version 1.0.0
+ * @date 2024-07-31
+ * @author Avery Crane
+ */
+
+/* Many Imports */
 import * as React from "react";
 import { SafeAreaView, StyleSheet, View, Alert } from "react-native";
 import { Camera, CameraMode, CameraView, FlashMode } from "expo-camera";
@@ -7,9 +19,13 @@ import MainRowActions from "../components/MainRowActions";
 import CameraTools from "../components/Tools/CameraTools";
 import VideoViewComponent from "../components/VideoViewComponent";
 import LoadingScreen from "../components/Views/LoadingView";
-import { uploadVideo } from "../src/UploadVideo"; 
+import { uploadVideo } from "../src/UploadVideo";
 
+/*
+ * The main record screen function
+ */
 export default function RecordScreen() {
+  /* Define constants */
   const cameraRef = React.useRef<CameraView>(null);
   const [cameraMode, setCameraMode] = React.useState<CameraMode>("video");
   const [cameraTorch, setCameraTorch] = React.useState<boolean>(false);
@@ -20,20 +36,22 @@ export default function RecordScreen() {
   const [processedVideoUrl, setProcessedVideoUrl] = React.useState<string | null>(null);
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
 
+  /* Obtain the needed permissions */
   React.useEffect(() => {
     (async () => {
       const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
       const { status: audioStatus } = await Camera.requestMicrophonePermissionsAsync();
       const { status: libraryStatus } = await MediaLibrary.requestPermissionsAsync();
-      
+
       setHasPermission(
-        cameraStatus === 'granted' && 
-        audioStatus === 'granted' && 
+        cameraStatus === 'granted' &&
+        audioStatus === 'granted' &&
         libraryStatus === 'granted'
       );
     })();
   }, []);
 
+  /* Our toggleRecord function to toggle when to start recording */
   async function toggleRecord() {
     if (isRecording) {
       cameraRef.current?.stopRecording();
@@ -45,9 +63,9 @@ export default function RecordScreen() {
     }
   }
 
+  /* Handle upload which will handle the upload process of the video */
   const handleUpload = async () => {
     if (!video) return;
-    
     setIsUploading(true);
     try {
       const result = await uploadVideo(video);
@@ -60,15 +78,18 @@ export default function RecordScreen() {
     }
   };
 
+  /* Handle the retake of the video, just resets to previous state */
   const handleRetake = () => {
     setVideo(null);
     setProcessedVideoUrl(null);
   };
 
+  /* If no permision selected, then loading screem (come back to this) */
   if (hasPermission === null) {
     return <LoadingScreen />;
   }
 
+  /* If no permission, do something (come back to this) */
   if (hasPermission === false) {
     return (
       <View style={styles.center}>
@@ -76,10 +97,12 @@ export default function RecordScreen() {
     );
   }
 
+  /* If we are uploading, show the loading screen */
   if (isUploading) {
     return <LoadingScreen />;
   }
 
+  /* If we got a video back, show it */
   if (processedVideoUrl) {
     return (
       <VideoViewComponent
@@ -90,6 +113,7 @@ export default function RecordScreen() {
     );
   }
 
+  /* Show preview of recording */
   if (video) {
     return (
       <VideoViewComponent
@@ -101,6 +125,7 @@ export default function RecordScreen() {
     );
   }
 
+  /* on return, show the record screen */
   return (
     <CameraView
       ref={cameraRef}
@@ -114,7 +139,7 @@ export default function RecordScreen() {
           <CameraTools
             cameraTorch={cameraTorch}
             setCameraFacing={setCameraFacing}
-            setCameraTorch={setCameraTorch} 
+            setCameraTorch={setCameraTorch}
           />
           <MainRowActions
             isRecording={isRecording}
@@ -131,6 +156,7 @@ export default function RecordScreen() {
   );
 }
 
+/* Styles, probably changning */
 const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
