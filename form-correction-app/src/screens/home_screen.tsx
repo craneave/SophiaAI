@@ -2,75 +2,120 @@
  * @file home_screen.tsx
  * 
  * @description This is the home screen of the application. It serves as the landing page and 
- *              provides navigation options to other parts of the app. Currently, it displays 
- *              a welcome message and allows navigation to other screens.
+ *              provides an overview of the app's features. It displays a welcome message, 
+ *              a motivational quote, and quick access buttons to key features.
  * 
- * @version 1.0.0
- * @date 2024-07-31
+ * @version 1.1.0
+ * @date 2024-08-03
  * @author Avery Crane
  */
 
-/* Import necessary modules and components */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ImageBackground } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-/* Define the type for the navigation parameters */
-type RootStackParamList = {
-  HomeScreen: undefined;
-  RecordScreen: undefined;
-  FeedbackScreen: undefined;
-};
 
-/* Define the navigation prop type for this screen */
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'HomeScreen'>;
-
-/* Define the props for the HomeScreen component */
-type Props = {
-  navigation: HomeScreenNavigationProp;
-};
-
-/* Custom button component for navigation (RIGHT NOW: I use app_navigator, so this could be used for something else in future)
-const CustomButton: React.FC<{ onPress: () => void, title: string }> = ({ onPress, title }) => (
-  <TouchableOpacity style={styles.button} onPress={onPress}>
-    <Text style={styles.buttonText}>{title}</Text>
+const QuickAccessButton: React.FC<{ onPress: () => void; title: string; icon: IconName }> = ({ onPress, title, icon }) => (
+  <TouchableOpacity style={styles.quickAccessButton} onPress={onPress}>
+    <Ionicons name={icon} size={24} color="#fff" />
+    <Text style={styles.quickAccessButtonText}>{title}</Text>
   </TouchableOpacity>
 );
-*/
 
-/* Main HomeScreen component */
-const HomeScreen: React.FC<Props> = ({ navigation }) => {
+const HomeScreen: React.FC = () => {
+  const navigation = useNavigation();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Your Workout App</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={require('../assets/images/background.png')}
+        style={styles.backgroundImage}
+      >
+        <View style={styles.overlay}>
+          <Text style={styles.title}>Welcome to SophiaAI</Text>
+          <Text style={styles.subtitle}>Your personal fitness companion</Text>
+          
+          <View style={styles.quoteContainer}>
+            <Text style={styles.quote}>"The only bad workout is the one that didn't happen."</Text>
+          </View>
+          
+          <View style={styles.quickAccessContainer}>
+            <QuickAccessButton 
+              onPress={() => navigation.navigate('Record' as never)}
+              title="Record Workout" 
+              icon="videocam-outline"
+            />
+            <QuickAccessButton 
+              onPress={() => {/* Navigate to progress screen */}}
+              title="View Progress" 
+              icon="stats-chart-outline"
+            />
+          </View>
+        </View>
+      </ImageBackground>
+    </SafeAreaView>
   );
 };
 
-/* Styles for the HomeScreen component */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backgroundImage: {
+    flex: 1,
+    resizeMode: 'cover',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
   title: {
-    fontSize: 24,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#3498db',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
+    fontSize: 32,
     fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
     textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#e0e0e0',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  quoteContainer: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 40,
+  },
+  quote: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  quickAccessContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  quickAccessButton: {
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '45%',
+  },
+  quickAccessButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 5,
   },
 });
 

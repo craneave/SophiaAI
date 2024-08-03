@@ -11,7 +11,7 @@
 
 /* Many Imports */
 import * as React from "react";
-import { SafeAreaView, StyleSheet, View, Alert } from "react-native";
+import { SafeAreaView, StyleSheet, View, Alert, Text } from "react-native";
 import { Camera, CameraMode, CameraView, FlashMode } from "expo-camera";
 import * as MediaLibrary from 'expo-media-library';
 import BottomRowTools from "../components/Tools/BottomRowTools";
@@ -35,6 +35,7 @@ export default function RecordScreen() {
   const [isUploading, setIsUploading] = React.useState<boolean>(false);
   const [processedVideoUrl, setProcessedVideoUrl] = React.useState<string | null>(null);
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
+  const [countdown, setCountdown] = React.useState<number | null>(null);
 
   /* Obtain the needed permissions */
   React.useEffect(() => {
@@ -57,9 +58,24 @@ export default function RecordScreen() {
       cameraRef.current?.stopRecording();
       setIsRecording(false);
     } else {
-      setIsRecording(true);
-      const response = await cameraRef.current?.recordAsync();
-      setVideo(response!.uri);
+      // Start the countdown
+      setCountdown(5);
+      const countdownInterval = setInterval(() => {
+        setCountdown((prevCount) => {
+          if (prevCount === 1) {
+            clearInterval(countdownInterval);
+            return null;
+          }
+          return prevCount! - 1;
+        });
+      }, 1000);
+
+      // Wait for the countdown to finish before starting the recording
+      setTimeout(async () => {
+        setIsRecording(true);
+        const response = await cameraRef.current?.recordAsync();
+        setVideo(response!.uri);
+      }, 5000);
     }
   }
 
@@ -136,6 +152,11 @@ export default function RecordScreen() {
     >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.fullScreen}>
+          {countdown !== null && (
+            <View style={styles.countdownOverlay}>
+              <Text style={styles.countdownText}>{countdown}</Text>
+            </View>
+          )}
           <CameraTools
             cameraTorch={cameraTorch}
             setCameraFacing={setCameraFacing}
@@ -167,5 +188,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  countdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  countdownText: {
+    fontSize: 72,
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
