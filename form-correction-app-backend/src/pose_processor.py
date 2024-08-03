@@ -18,6 +18,57 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
+# Rep counting tolerance and key values
+tolerance = 30
+keyValues = ['Nose', 'Left eye', 'Right eye', 'Left ear', 'Right ear', 'Left shoulder',
+             'Right shoulder', 'Left elbow', 'Right elbow', 'Left wrist', 'Right wrist',
+             'Left hip', 'Right hip', 'Left knee', 'Right knee', 'Left ankle', 'Right ankle']
+
+
+"""
+    Count reps based on change of joints.
+
+    Param:
+        previous_pose: the previous pose landmarks
+        current_pose: the current pose landmarks
+        previous_state: the previous state of the action
+        flag: the flag to change or not
+
+    Returns:
+        string: a string in case none found
+        current_pose: the current pose landmarks
+        current_state: the current state
+        flag: the current flag
+"""
+def count_repetition(previous_pose, current_pose, previous_state, flag):
+    if current_pose[10].visibility < 0.5:
+        return 'Cannot detect any joint in the frame', previous_pose, previous_state, flag
+    else:
+        string, current_state = '', previous_state.copy()
+        sdy, sdx = 0, 0
+        
+        # Process key points from left shoulder to right ankle        
+        for i in range(5, 17):
+            dx = current_pose[i].x - previous_pose[i].x
+            dy = current_pose[i].y - previous_pose[i].y
+            if dx < tolerance / 1000 and dx > (-1 * tolerance / 1000):
+                dx = 0
+            if dy < tolerance / 1000 and dy > (-1 * tolerance / 1000):
+                dy = 0
+            sdx += dx
+            sdy += dy
+        if sdx > (tolerance * 3 / 1000):
+            current_state[0] = 1
+        elif sdx < (tolerance * -3 / 1000):
+            current_state[0] = 0
+        if sdy > (tolerance * 3 / 1000):
+            current_state[1] = 1
+        elif sdy < (tolerance * -3 / 1000):
+            current_state[1] = 0
+        if current_state != previous_state:
+            flag = (flag + 1) % 2
+        return string, current_pose, current_state.copy(), flag
+
 """
     Process the input video, apply MediaPipe pose estimation, and write processed frames to the output video.
 
@@ -31,9 +82,11 @@ mp_drawing_styles = mp.solutions.drawing_styles
 def process_video_with_pose(cap, out):
     frames_processed = 0
     total_confidence = 0
-    
-    # Initialize MediaPipe pose with specified confidence thresholds and model complexity. We can change this based on speed, accuracy etc.
-    # For now, just hard coded without speed in mind
+    rep_count = 0
+    flag = -1
+    previous_pose = None
+    current_state = [2, 2]
+
     with mp_pose.Pose(
         min_detection_confidence=0.7,
         min_tracking_confidence=0.7,
@@ -42,25 +95,29 @@ def process_video_with_pose(cap, out):
         while cap.isOpened():
             success, image = cap.read()
             
-            # check if read successfully
             if not success:
                 break
             
-            # count frames processed and process each frame
             frames_processed += 1
-            processed_image, confidence = process_frame(image, pose, frames_processed)
+            processed_image, confidence, pose_landmarks = process_frame(image, pose, frames_processed, rep_count)
             
             if processed_image is not None:
                 total_confidence += confidence
                 out.write(processed_image)
-    
-    # calculate average confidence
+                
+                if previous_pose is None:
+                    previous_pose = pose_landmarks.landmark
+                text, previous_pose, current_state, flag = count_repetition(previous_pose, pose_landmarks.landmark, current_state, flag)
+                if flag == 1:
+                    rep_count += 1
+                    flag = -1
+                
     average_confidence = total_confidence / frames_processed if frames_processed > 0 else 0
     
-    # return the frames processed and the confidence
     return {
         "framesProcessed": frames_processed,
         "averageConfidence": float(average_confidence),
+        "repCount": rep_count
     }
 
 """
@@ -74,23 +131,20 @@ def process_video_with_pose(cap, out):
     Returns:
         tuple: Processed image with landmarks and frame information, and the confidence of pose detection.
 """
-def process_frame(image, pose, frame_count):
-    # Convert the image to RGB format for pose processing
+def process_frame(image, pose, frame_count, rep_count):
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = pose.process(image)
     
-    # Convert the image back to BGR format for OpenCV processing
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     
-    # Draw the landmarks and obtain the confidence from each
     if results.pose_landmarks:
         draw_pose_landmarks(image, results)
         confidence = get_landmark_confidence(results)
-        add_frame_info(image, confidence, frame_count)
-        return image, confidence
-    return None, 0
+        add_frame_info(image, confidence, frame_count, rep_count)
+        return image, confidence, results.pose_landmarks
+    return None, 0, None
 
 """
     Draw pose landmarks on the image using MediaPipe drawing utilities.
@@ -121,9 +175,10 @@ def draw_pose_landmarks(image, results):
     Returns:
         None
 """
-def add_frame_info(image, confidence, frame_count):
+def add_frame_info(image, confidence, frame_count, rep_count):
     cv2.putText(image, f"Frame: {frame_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.putText(image, f"Confidence: {confidence:.2f}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(image, 'Count: ' + str(rep_count), (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
 """
     Calculate the confidence score for the detected pose landmarks.

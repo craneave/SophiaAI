@@ -12,7 +12,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
-const videoPath = 'test_video.mp4';
+const videoPath = 'Avery_shoulder.mp4';
 const url = 'http://localhost:3000/process-video';
 const form = new FormData();
 
