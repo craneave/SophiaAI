@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -28,9 +28,10 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
       <ImageBackground
-        source={require('../assets/images/background.png')}
+        source={require('../assets/images/bg.jpg')}
         style={styles.backgroundImage}
       >
         <View style={styles.overlay}>
@@ -55,7 +56,7 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
       </ImageBackground>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -66,6 +67,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
     resizeMode: 'cover',
+    justifyContent: 'center',
   },
   overlay: {
     flex: 1,

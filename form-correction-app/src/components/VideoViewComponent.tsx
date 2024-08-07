@@ -12,7 +12,7 @@
 
 /* Import necessary modules and components */
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, View, Text } from "react-native";
+import { Alert, StyleSheet, View, Text, Dimensions } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { saveToLibraryAsync } from "expo-media-library";
 import IconButton from "./IconButton";
@@ -58,87 +58,90 @@ export default function VideoViewComponent({
 
   return (
     <View style={styles.container}>
-      <View style={styles.controlsContainer}>
-        {/* Button to retake the video */}
-        <IconButton
-          onPress={onRetake}
-          iosName={"camera.rotate"}
-          androidName="camera-reverse"
-        />
-        {/* Button to save video to the library */}
-        <IconButton
-          onPress={async () => {
-            await saveToLibraryAsync(currentVideoUrl);
-            Alert.alert("✅ Video saved!");
-          }}
-          iosName={"arrow.down"}
-          androidName="download"
-        />
-        {/* Button to toggle play/pause */}
-        <IconButton
-          iosName={isPlaying ? "pause" : "play"}
-          androidName={isPlaying ? "pause" : "play"}
-          onPress={() => {
-            if (isPlaying) {
-              player.pause();
-            } else {
-              player.play();
-            }
-            setIsPlaying(!isPlaying);
-          }}
-        />
-        {/* Button to upload the video (if available) */}
-        {onUpload && !processedVideoUrl && (
-          <IconButton
-            iosName="checkmark.circle.fill"
-            androidName="checkmark-circle"
-            onPress={onUpload}
-          />
-        )}
-      </View>
-      {/* Video player component */}
       <VideoView
         style={styles.video}
         ref={ref}
         player={player}
         nativeControls={false}
       />
-      {/* Indicator for video type (original or processed) */}
-      <View style={styles.indicatorContainer}>
-        <Text style={styles.indicatorText}>
-          {processedVideoUrl ? "Processed Video" : "Original Video"}
-        </Text>
+      <View style={styles.overlay}>
+        <View style={styles.controlsContainer}>
+          <IconButton
+            onPress={onRetake}
+            iosName={"camera.rotate"}
+            androidName="camera-reverse"
+          />
+          <IconButton
+            onPress={async () => {
+              await saveToLibraryAsync(currentVideoUrl);
+              Alert.alert("✅ Video saved!");
+            }}
+            iosName={"arrow.down"}
+            androidName="download"
+          />
+          <IconButton
+            iosName={isPlaying ? "pause" : "play"}
+            androidName={isPlaying ? "pause" : "play"}
+            onPress={() => {
+              if (isPlaying) {
+                player.pause();
+              } else {
+                player.play();
+              }
+              setIsPlaying(!isPlaying);
+            }}
+          />
+          {onUpload && !processedVideoUrl && (
+            <IconButton
+              iosName="checkmark.circle.fill"
+              androidName="checkmark-circle"
+              onPress={onUpload}
+            />
+          )}
+        </View>
+        <View style={styles.indicatorContainer}>
+          <Text style={styles.indicatorText}>
+            {processedVideoUrl ? "Processed Video" : "Pre-Processed Video"}
+          </Text>
+        </View>
       </View>
     </View>
   );
 }
 
-/* Styles for the VideoViewComponent */
+/* Styles */
+const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+    backgroundColor: 'black',
+  },
+  video: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
   },
   controlsContainer: {
-    position: "absolute",
-    top: 10,
-    zIndex: 1,
-    gap: 85,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 10,
-    paddingTop: 50,
-  },
-  video: {
-    flex: 1,
+    paddingTop: 40,
   },
   indicatorContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
+    alignSelf: 'flex-start',
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 5,
     borderRadius: 5,
+    margin: 20,
   },
   indicatorText: {
     color: 'white',

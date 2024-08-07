@@ -9,6 +9,7 @@
 @date 2024-07-31
 @author Avery Crane
 """
+from unittest import result
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -19,11 +20,39 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
 # Rep counting tolerance and key values
-tolerance = 30
-keyValues = ['Nose', 'Left eye', 'Right eye', 'Left ear', 'Right ear', 'Left shoulder',
-             'Right shoulder', 'Left elbow', 'Right elbow', 'Left wrist', 'Right wrist',
-             'Left hip', 'Right hip', 'Left knee', 'Right knee', 'Left ankle', 'Right ankle']
+tolerance = 5
+mediapipe_pose_keypoints = [
+    # Face
+    "nose",
+    "left_eye_inner",  "left_eye",  "left_eye_outer",
+    "right_eye_inner", "right_eye", "right_eye_outer",
+    "left_ear", "right_ear",
+    "mouth_left", "mouth_right",
 
+    # Upper body
+    "left_shoulder",  "right_shoulder",
+    "left_elbow",     "right_elbow",
+    "left_wrist",     "right_wrist",
+
+    # Hands
+    "left_pinky",  "right_pinky",
+    "left_index",  "right_index",
+    "left_thumb",  "right_thumb",
+
+    # Lower body
+    "left_hip",    "right_hip",
+    "left_knee",   "right_knee",
+    "left_ankle",  "right_ankle",
+
+    # Feet
+    "left_heel",   "right_heel",
+    "left_foot_index", "right_foot_index"
+]
+KEY_STATES = {
+    'start': [0, 0],  # Initial state
+    'down': [0, 1],   # Lower position
+    'up': [1, 0]      # Upper position
+}
 
 """
     Count reps based on change of joints.
@@ -32,43 +61,51 @@ keyValues = ['Nose', 'Left eye', 'Right eye', 'Left ear', 'Right ear', 'Left sho
         previous_pose: the previous pose landmarks
         current_pose: the current pose landmarks
         previous_state: the previous state of the action
+        rep_count: # of reps so far
         flag: the flag to change or not
 
     Returns:
         string: a string in case none found
         current_pose: the current pose landmarks
         current_state: the current state
+        rep_count: # of reps
         flag: the current flag
 """
-def count_repetition(previous_pose, current_pose, previous_state, flag):
-    if current_pose[10].visibility < 0.5:
-        return 'Cannot detect any joint in the frame', previous_pose, previous_state, flag
+def count_repetition(previous_pose, current_pose, previous_state, rep_count, flag):
+    current_state = previous_state.copy()
+    movement_threshold = 0.015  # Adjust as needed
+    cooldown = 15  # Frames to wait before counting another rep
+    
+    # Key points for both exercises
+    upper_body_points = [11, 12, 13, 14, 15, 16]  # Shoulders, elbows, wrists
+    lower_body_points = [23, 24, 25, 26, 27, 28]  # Hips, knees, ankles
+    
+    upper_movement = sum(current_pose[i].y - previous_pose[i].y for i in upper_body_points) / len(upper_body_points)
+    lower_movement = sum(current_pose[i].y - previous_pose[i].y for i in lower_body_points) / len(lower_body_points)
+    
+    # Determine the exercise type and state based on movement
+    if abs(upper_movement) > abs(lower_movement):
+        # Likely a shoulder press
+        if upper_movement < -movement_threshold:
+            current_state = KEY_STATES['up']
+        elif upper_movement > movement_threshold:
+            current_state = KEY_STATES['down']
     else:
-        string, current_state = '', previous_state.copy()
-        sdy, sdx = 0, 0
-        
-        # Process key points from left shoulder to right ankle        
-        for i in range(5, 17):
-            dx = current_pose[i].x - previous_pose[i].x
-            dy = current_pose[i].y - previous_pose[i].y
-            if dx < tolerance / 1000 and dx > (-1 * tolerance / 1000):
-                dx = 0
-            if dy < tolerance / 1000 and dy > (-1 * tolerance / 1000):
-                dy = 0
-            sdx += dx
-            sdy += dy
-        if sdx > (tolerance * 3 / 1000):
-            current_state[0] = 1
-        elif sdx < (tolerance * -3 / 1000):
-            current_state[0] = 0
-        if sdy > (tolerance * 3 / 1000):
-            current_state[1] = 1
-        elif sdy < (tolerance * -3 / 1000):
-            current_state[1] = 0
-        if current_state != previous_state:
-            flag = (flag + 1) % 2
-        return string, current_pose, current_state.copy(), flag
-
+        # Likely a squat
+        if lower_movement < -movement_threshold:
+            current_state = KEY_STATES['up']
+        elif lower_movement > movement_threshold:
+            current_state = KEY_STATES['down']
+    
+    # Count rep when a full cycle is completed and cooldown has passed
+    if current_state != previous_state and flag >= cooldown:
+        if (previous_state == KEY_STATES['down'] and current_state == KEY_STATES['up']):
+            rep_count += 1
+            flag = 0
+    else:
+        flag += 1
+    
+    return current_pose, current_state, rep_count, flag
 """
     Process the input video, apply MediaPipe pose estimation, and write processed frames to the output video.
 
@@ -79,13 +116,15 @@ def count_repetition(previous_pose, current_pose, previous_state, flag):
     Returns:
         dict: A dictionary containing the number of frames processed and the average confidence.
 """
+
+
 def process_video_with_pose(cap, out):
     frames_processed = 0
     total_confidence = 0
     rep_count = 0
-    flag = -1
+    flag = 0
     previous_pose = None
-    current_state = [2, 2]
+    current_state = KEY_STATES['start']
 
     with mp_pose.Pose(
         min_detection_confidence=0.7,
@@ -94,31 +133,33 @@ def process_video_with_pose(cap, out):
     ) as pose:
         while cap.isOpened():
             success, image = cap.read()
-            
+
             if not success:
                 break
-            
+
             frames_processed += 1
-            processed_image, confidence, pose_landmarks = process_frame(image, pose, frames_processed, rep_count)
-            
-            if processed_image is not None:
+            processed_image, confidence, pose_landmarks = process_frame(
+                image, pose, frames_processed, rep_count)
+
+            if processed_image is not None and pose_landmarks is not None:
                 total_confidence += confidence
                 out.write(processed_image)
-                
+
                 if previous_pose is None:
                     previous_pose = pose_landmarks.landmark
-                text, previous_pose, current_state, flag = count_repetition(previous_pose, pose_landmarks.landmark, current_state, flag)
-                if flag == 1:
-                    rep_count += 1
-                    flag = -1
-                
+                else:
+                     previous_pose, current_state, rep_count, flag = count_repetition(
+            previous_pose, pose_landmarks.landmark, current_state, rep_count, flag)
+
     average_confidence = total_confidence / frames_processed if frames_processed > 0 else 0
-    
+
     return {
         "framesProcessed": frames_processed,
         "averageConfidence": float(average_confidence),
         "repCount": rep_count
     }
+
+
 
 """
     Process a single frame to detect pose landmarks and overlay the landmarks and frame information on the image.
@@ -131,20 +172,23 @@ def process_video_with_pose(cap, out):
     Returns:
         tuple: Processed image with landmarks and frame information, and the confidence of pose detection.
 """
+
+
 def process_frame(image, pose, frame_count, rep_count):
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = pose.process(image)
-    
+
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    
+
     if results.pose_landmarks:
         draw_pose_landmarks(image, results)
         confidence = get_landmark_confidence(results)
         add_frame_info(image, confidence, frame_count, rep_count)
         return image, confidence, results.pose_landmarks
     return None, 0, None
+
 
 """
     Draw pose landmarks on the image using MediaPipe drawing utilities.
@@ -156,6 +200,8 @@ def process_frame(image, pose, frame_count, rep_count):
     Returns:
         None
 """
+
+
 def draw_pose_landmarks(image, results):
     mp_drawing.draw_landmarks(
         image,
@@ -163,6 +209,7 @@ def draw_pose_landmarks(image, results):
         mp_pose.POSE_CONNECTIONS,
         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
     )
+
 
 """
     Overlay frame information such as frame count and confidence score on the image.
@@ -175,10 +222,16 @@ def draw_pose_landmarks(image, results):
     Returns:
         None
 """
+
+
 def add_frame_info(image, confidence, frame_count, rep_count):
-    cv2.putText(image, f"Frame: {frame_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.putText(image, f"Confidence: {confidence:.2f}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.putText(image, 'Count: ' + str(rep_count), (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(image, f"Frame: {frame_count}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(image, f"Confidence: {confidence:.2f}",
+                (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(image, 'Count: ' + str(rep_count), (10, 110),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
 
 """
     Calculate the confidence score for the detected pose landmarks.
@@ -189,6 +242,8 @@ def add_frame_info(image, confidence, frame_count, rep_count):
     Returns:
         float: The average confidence score of the pose landmarks.
 """
+
+
 def get_landmark_confidence(results):
     if results.pose_landmarks:
         return sum(lm.visibility for lm in results.pose_landmarks.landmark) / len(results.pose_landmarks.landmark)

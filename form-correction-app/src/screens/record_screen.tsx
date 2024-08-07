@@ -11,21 +11,23 @@
 
 /* Many Imports */
 import * as React from "react";
-import { SafeAreaView, StyleSheet, View, Alert, Text } from "react-native";
+import { SafeAreaView, StyleSheet, View, Alert, Text, TouchableOpacity, Dimensions } from "react-native";
 import { Camera, CameraMode, CameraView, FlashMode } from "expo-camera";
 import * as MediaLibrary from 'expo-media-library';
-import BottomRowTools from "../components/Tools/BottomRowTools";
 import MainRowActions from "../components/MainRowActions";
 import CameraTools from "../components/Tools/CameraTools";
 import VideoViewComponent from "../components/VideoViewComponent";
 import LoadingScreen from "../components/Views/LoadingView";
 import { uploadVideo } from "../scripts/UploadVideo";
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from "@expo/vector-icons";
 
 /*
  * The main record screen function
  */
 export default function RecordScreen() {
   /* Define constants */
+  const navigation = useNavigation();
   const cameraRef = React.useRef<CameraView>(null);
   const [cameraMode, setCameraMode] = React.useState<CameraMode>("video");
   const [cameraTorch, setCameraTorch] = React.useState<boolean>(false);
@@ -143,42 +145,50 @@ export default function RecordScreen() {
 
   /* on return, show the record screen */
   return (
-    <CameraView
-      ref={cameraRef}
-      style={{ flex: 1, width: "100%", height: "100%" }}
-      facing={cameraFacing}
-      mode={cameraMode}
-      enableTorch={cameraTorch}
-    >
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.fullScreen}>
-          {countdown !== null && (
-            <View style={styles.countdownOverlay}>
-              <Text style={styles.countdownText}>{countdown}</Text>
-            </View>
-          )}
-          <CameraTools
-            cameraTorch={cameraTorch}
-            setCameraFacing={setCameraFacing}
-            setCameraTorch={setCameraTorch}
-          />
-          <MainRowActions
-            isRecording={isRecording}
-            handleRecord={toggleRecord}
-            cameraMode={cameraMode}
-          />
-          <BottomRowTools
-            cameraMode={cameraMode}
-            setCameraMode={setCameraMode}
-          />
+    <View style={styles.container}>
+      <CameraView
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        facing={cameraFacing}
+        mode={cameraMode}
+        enableTorch={cameraTorch}
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <View style={styles.fullScreen}>
+            <CameraTools
+              cameraTorch={cameraTorch}
+              setCameraFacing={setCameraFacing}
+              setCameraTorch={setCameraTorch}
+            />
+            <MainRowActions
+              isRecording={isRecording}
+              handleRecord={toggleRecord}
+              cameraMode={cameraMode}
+            />
+          </View>
+        </SafeAreaView>
+      </CameraView>
+      {countdown !== null && (
+        <View style={styles.countdownOverlay}>
+          <Text style={styles.countdownText}>{countdown}</Text>
         </View>
-      </SafeAreaView>
-    </CameraView>
+      )}
+    </View>
   );
 }
 
 /* Styles, probably changning */
+const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   fullScreen: {
     flex: 1,
     width: '100%',
@@ -189,8 +199,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 10,
+  },
   countdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
